@@ -45,6 +45,46 @@ type MarginOfferStore interface {
 	Close() error
 }
 
+// PositionStore defines the interface for position storage operations
+type PositionStore interface {
+	// CRUD operations
+	Create(ctx context.Context, position *MarginPosition) error
+	GetByID(ctx context.Context, id string) (*MarginPosition, error)
+	Update(ctx context.Context, position *MarginPosition) error
+	Delete(ctx context.Context, id string) error
+
+	// CreateOrUpdate operations (upsert)
+	CreateOrUpdate(ctx context.Context, position *MarginPosition) error
+
+	// Query operations
+	List(ctx context.Context, req *PositionListRequest) ([]*MarginPosition, error)
+	ListByUser(ctx context.Context, userAddress string, req *PositionListRequest) ([]*MarginPosition, error)
+	ListByOffer(ctx context.Context, offerID string, req *PositionListRequest) ([]*MarginPosition, error)
+	ListByStatus(ctx context.Context, status PositionStatus, req *PositionListRequest) ([]*MarginPosition, error)
+
+	// Bulk operations
+	BulkCreate(ctx context.Context, positions []*MarginPosition) error
+	BulkUpdate(ctx context.Context, positions []*MarginPosition) error
+	BulkDelete(ctx context.Context, ids []string) error
+
+	// Bulk CreateOrUpdate operations (upsert)
+	BulkCreateOrUpdate(ctx context.Context, positions []*MarginPosition) error
+
+	// Stats and aggregation
+	Count(ctx context.Context) (int64, error)
+	CountByStatus(ctx context.Context, status PositionStatus) (int64, error)
+	CountByUser(ctx context.Context, userAddress string) (int64, error)
+	GetTotalCollateral(ctx context.Context, collateralToken string) (float64, error)
+	GetTotalBorrowed(ctx context.Context, borrowToken string) (float64, error)
+
+	// Transaction building
+	BuildTransaction(ctx context.Context, req *TransactionBuilderRequest) (*TransactionBuilderResponse, error)
+
+	// Health and maintenance
+	HealthCheck(ctx context.Context) error
+	Close() error
+}
+
 // OverwriteFilter defines criteria for partial overwrite operations
 type OverwriteFilter struct {
 	// Filter criteria - offers matching these will be deleted before inserting new ones

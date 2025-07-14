@@ -39,6 +39,7 @@ type MarginOffer struct {
 	CreatedTimestamp      time.Time     `json:"created_timestamp" bson:"created_timestamp"`
 	UpdatedTimestamp      time.Time     `json:"updated_timestamp" bson:"updated_timestamp"`
 	Source                *string       `json:"source,omitempty" bson:"source,omitempty"`
+	TxBuilderWire         *string       `json:"txbuilderwire,omitempty" bson:"txbuilderwire,omitempty"` // Arbitrary data (e.g., JSON) for transaction builder
 }
 
 // Validate performs basic validation on the MarginOffer
@@ -110,6 +111,10 @@ func (mo *MarginOffer) Clone() *MarginOffer {
 	if mo.Source != nil {
 		source := *mo.Source
 		clone.Source = &source
+	}
+	if mo.TxBuilderWire != nil {
+		txBuilderWire := *mo.TxBuilderWire
+		clone.TxBuilderWire = &txBuilderWire
 	}
 	return &clone
 }

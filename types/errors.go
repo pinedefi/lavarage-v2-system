@@ -23,6 +23,21 @@ var (
 	ErrInvalidPaginationParams = errors.New("invalid pagination parameters")
 	ErrInternalServerError     = errors.New("internal server error")
 	ErrServiceUnavailable      = errors.New("service temporarily unavailable")
+	
+	// Position-specific errors
+	ErrMissingUserAddress       = errors.New("missing user address")
+	ErrMissingOfferID           = errors.New("missing offer ID")
+	ErrInvalidCollateralAmount  = errors.New("invalid collateral amount: must be non-negative")
+	ErrInvalidBorrowedAmount    = errors.New("invalid borrowed amount: must be non-negative")
+	ErrInvalidCurrentLTV        = errors.New("invalid current LTV: must be between 0 and 1")
+	ErrInvalidMaxLTV            = errors.New("invalid max LTV: must be between 0 and 1")
+	ErrMissingStatus            = errors.New("missing position status")
+	ErrPositionNotFound         = errors.New("position not found")
+	ErrPositionAlreadyExists    = errors.New("position already exists")
+	ErrInvalidPositionStatus    = errors.New("invalid position status")
+	ErrPositionNotActive        = errors.New("position is not active")
+	ErrPositionAlreadyClosed    = errors.New("position is already closed")
+	ErrPositionAlreadyLiquidated = errors.New("position is already liquidated")
 )
 
 // Store errors

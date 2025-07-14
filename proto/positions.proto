@@ -1,0 +1,255 @@
+syntax = "proto3";
+
+package marginoffer.v1;
+
+option go_package = "github.com/piske-alex/margin-offer-system/proto/gen/go";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "proto/margin_offer.proto";
+
+// Position represents a margin trading position
+message Position {
+  string id = 1;
+  string user_address = 2; // User's wallet address
+  string offer_id = 3; // Reference to the margin offer
+  string collateral_token = 4;
+  string borrow_token = 5;
+  double collateral_amount = 6; // Amount of collateral deposited
+  double borrowed_amount = 7; // Amount borrowed
+  double current_ltv = 8; // Current loan-to-value ratio
+  double max_ltv = 9; // Maximum allowed LTV from the offer
+  double liquidation_ltv = 10; // Liquidation LTV from the offer
+  double interest_rate = 11; // Current interest rate
+  string interest_model = 12; // fixed, floating
+  string status = 13; // active, liquidated, closed, pending
+  google.protobuf.Timestamp created_timestamp = 14;
+  google.protobuf.Timestamp updated_timestamp = 15;
+  optional google.protobuf.Timestamp liquidated_timestamp = 16;
+  optional google.protobuf.Timestamp closed_timestamp = 17;
+  optional string liquidator_address = 18; // Address that liquidated the position
+  optional double liquidation_penalty = 19; // Penalty paid during liquidation
+  optional string source = 20; // e.g., "marginfi", "jupiter", "manual"
+  optional string txbuilderwire = 21; // Arbitrary data (e.g., JSON) for transaction builder
+}
+
+// PositionFilter message definition for filtering positions
+message PositionFilter {
+  optional string user_address = 1;
+  optional string offer_id = 2;
+  optional string collateral_token = 3;
+  optional string borrow_token = 4;
+  optional string status = 5;
+  optional string source = 6;
+  optional google.protobuf.Timestamp created_after = 7;
+  optional google.protobuf.Timestamp created_before = 8;
+  optional google.protobuf.Timestamp updated_after = 9;
+  optional google.protobuf.Timestamp updated_before = 10;
+}
+
+// OnChainInstruction represents a blockchain instruction
+message OnChainInstruction {
+  string program_id = 1; // Program/contract address
+  repeated bytes accounts = 2; // Account addresses as bytes
+  bytes data = 3; // Instruction data
+  optional string description = 4; // Human-readable description
+  optional string instruction_type = 5; // e.g., "create_position", "close_position", "liquidate"
+}
+
+// TransactionBuilderRequest represents a request to build a transaction
+message TransactionBuilderRequest {
+  string operation_type = 1; // create, update, close, liquidate
+  Position position = 2; // Position data for the operation
+  map<string, string> parameters = 3; // Additional parameters
+  optional string network = 4; // e.g., "mainnet", "devnet"
+  optional string wallet_address = 5; // User's wallet address
+}
+
+// TransactionBuilderResponse represents the response with on-chain instructions
+message TransactionBuilderResponse {
+  repeated OnChainInstruction instructions = 1;
+  optional string transaction_signature = 2; // For completed transactions
+  optional string error_message = 3; // If there was an error
+  map<string, string> metadata = 4; // Additional metadata
+}
+
+// Request messages
+message CreatePositionRequest {
+  Position position = 1;
+  bool generate_instructions = 2; // Whether to generate on-chain instructions
+}
+
+message GetPositionRequest {
+  string id = 1;
+}
+
+message UpdatePositionRequest {
+  Position position = 1;
+  bool generate_instructions = 2;
+}
+
+message DeletePositionRequest {
+  string id = 1;
+  bool generate_instructions = 2;
+}
+
+message ListPositionsRequest {
+  int32 limit = 1;
+  int32 offset = 2;
+  optional string sort_by = 3;
+  optional string sort_order = 4;
+  
+  // Filters
+  optional string user_address = 5;
+  optional string offer_id = 6;
+  optional string collateral_token = 7;
+  optional string borrow_token = 8;
+  optional string status = 9;
+  optional string source = 10;
+  
+  // Range filters
+  optional double min_collateral_amount = 11;
+  optional double max_collateral_amount = 12;
+  optional double min_borrowed_amount = 13;
+  optional double max_borrowed_amount = 14;
+  optional double min_ltv = 15;
+  optional double max_ltv = 16;
+  
+  // Time filters
+  optional google.protobuf.Timestamp created_after = 17;
+  optional google.protobuf.Timestamp created_before = 18;
+  
+  // Status filters
+  bool include_liquidated = 19;
+  bool active_only = 20;
+}
+
+message BulkCreatePositionsRequest {
+  repeated Position positions = 1;
+  bool ignore_conflicts = 2;
+  bool validate_all = 3;
+  bool generate_instructions = 4;
+}
+
+message BulkUpdatePositionsRequest {
+  repeated Position positions = 1;
+  bool upsert = 2;
+  bool partial_update = 3;
+  bool generate_instructions = 4;
+}
+
+message BulkDeletePositionsRequest {
+  repeated string ids = 1;
+  bool ignore_not_found = 2;
+  bool generate_instructions = 3;
+}
+
+message BuildTransactionRequest {
+  TransactionBuilderRequest request = 1;
+}
+
+// Response messages
+message CreatePositionResponse {
+  Position position = 1;
+  optional TransactionBuilderResponse instructions = 2;
+}
+
+message GetPositionResponse {
+  Position position = 1;
+}
+
+message UpdatePositionResponse {
+  Position position = 1;
+  optional TransactionBuilderResponse instructions = 2;
+}
+
+message DeletePositionResponse {
+  bool success = 1;
+  optional TransactionBuilderResponse instructions = 2;
+}
+
+message ListPositionsResponse {
+  repeated Position positions = 1;
+  int64 total = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+  bool has_more = 5;
+  optional int32 next_offset = 6;
+}
+
+message BuildTransactionResponse {
+  TransactionBuilderResponse response = 1;
+}
+
+// Position change events for subscriptions
+message PositionChange {
+  enum ChangeType {
+    UNKNOWN = 0;
+    CREATED = 1;
+    UPDATED = 2;
+    DELETED = 3;
+    LIQUIDATED = 4;
+    CLOSED = 5;
+  }
+  
+  ChangeType change_type = 1;
+  Position position = 2;
+  google.protobuf.Timestamp timestamp = 3;
+  string source = 4; // e.g., "backfiller", "api", "manual"
+  string operation_id = 5; // Unique ID for the operation that caused this change
+  map<string, string> metadata = 6; // Additional context about the change
+}
+
+// Subscription messages
+message SubscribePositionsRequest {
+  // Filter for specific types of changes
+  optional string user_address = 1;
+  optional string offer_id = 2;
+  optional string status = 3;
+  optional string source = 4;
+  
+  // Subscribe to specific change types
+  bool subscribe_created = 5;
+  bool subscribe_updated = 6;
+  bool subscribe_deleted = 7;
+  bool subscribe_liquidated = 8;
+  bool subscribe_closed = 9;
+  
+  // Client identification
+  string client_id = 10;
+  string session_id = 11;
+}
+
+message SubscribePositionsResponse {
+  oneof event {
+    PositionChange change = 1;
+    SubscriptionHeartbeat heartbeat = 2;
+    SubscriptionError error = 3;
+  }
+}
+
+// Service definition
+service PositionService {
+  // CRUD operations
+  rpc CreatePosition(CreatePositionRequest) returns (CreatePositionResponse);
+  rpc GetPosition(GetPositionRequest) returns (GetPositionResponse);
+  rpc UpdatePosition(UpdatePositionRequest) returns (UpdatePositionResponse);
+  rpc DeletePosition(DeletePositionRequest) returns (DeletePositionResponse);
+  
+  // List operations
+  rpc ListPositions(ListPositionsRequest) returns (ListPositionsResponse);
+  
+  // Bulk operations
+  rpc BulkCreatePositions(BulkCreatePositionsRequest) returns (BulkOperationResponse);
+  rpc BulkUpdatePositions(BulkUpdatePositionsRequest) returns (BulkOperationResponse);
+  rpc BulkDeletePositions(BulkDeletePositionsRequest) returns (BulkOperationResponse);
+  
+  // Transaction building
+  rpc BuildTransaction(BuildTransactionRequest) returns (BuildTransactionResponse);
+  
+  // Health check
+  rpc HealthCheck(google.protobuf.Empty) returns (HealthCheckResponse);
+  
+  // Subscription service
+  rpc SubscribePositions(SubscribePositionsRequest) returns (stream SubscribePositionsResponse);
+} 

@@ -61,6 +61,7 @@ interface MarginOffer {
   interestModel: string;
   liquiditySource: string;
   source?: string;
+  txbuilderwire?: string;
   createdTimestamp: Date;
   updatedTimestamp: Date;
 }
@@ -352,6 +353,10 @@ class MarginFiSyncService {
               interestModel: borrowBank.interestModel,
               liquiditySource: "marginfi",
               source: "marginfi",
+              txbuilderwire: JSON.stringify({
+                depositBank: depositBank.address,
+                borrowBank: borrowBank.address,
+              }),
               createdTimestamp: now,
               updatedTimestamp: now,
             });
@@ -379,6 +384,7 @@ class MarginFiSyncService {
           interestModel: offer.interestModel,
           liquiditySource: offer.liquiditySource,
           source: offer.source,
+          txbuilderwire: offer.txbuilderwire,
           createdTimestamp: {
             seconds: Math.floor(offer.createdTimestamp.getTime() / 1000),
             nanos: (offer.createdTimestamp.getTime() % 1000) * 1000000,

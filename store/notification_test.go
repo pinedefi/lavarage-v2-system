@@ -701,3 +701,135 @@ func TestSimpleSubscriptionFlow(t *testing.T) {
 		t.Fatal("Timeout waiting for notification")
 	}
 }
+
+func TestTxBuilderWire(t *testing.T) {
+	// Create store with notification service
+	logger := logger.NewLogger("test")
+	metrics := metrics.NewMetricsCollector()
+	store := NewMemoryStore(logger, metrics)
+	store.notificationService = NewNotificationService(logger)
+
+	// Create subscription
+	req := &pb.SubscribeMarginOffersRequest{
+		SubscribeCreated:     true,
+		SubscribeUpdated:     true,
+		SubscribeDeleted:     true,
+		SubscribeOverwritten: true,
+		ClientId:             "test_client",
+		SessionId:            "test_session",
+	}
+
+	subscription, err := store.notificationService.Subscribe(req)
+	if err != nil {
+		t.Fatalf("Failed to create subscription: %v", err)
+	}
+	defer store.notificationService.Unsubscribe(subscription.ID)
+
+	t.Logf("Created subscription: %s", subscription.ID)
+
+	// Create an offer with txbuilderwire data
+	txBuilderData := `{"instructions": [{"programId": "11111111111111111111111111111111", "data": "test"}]}`
+	offer := &types.MarginOffer{
+		ID:              "test_offer_with_tx",
+		CollateralToken: "SOL",
+		BorrowToken:     "USDC",
+		LiquiditySource: "marginfi",
+		TxBuilderWire:   &txBuilderData,
+	}
+
+	// Trigger a notification
+	event := &ChangeEvent{
+		ChangeType:  ChangeTypeCreated,
+		Offer:       offer,
+		Timestamp:   time.Now().UTC(),
+		Source:      "test",
+		OperationID: "test_operation",
+	}
+
+	store.notificationService.NotifyChange(event)
+
+	// Wait for notification
+	select {
+	case response := <-subscription.Channel:
+		if response.GetChange() == nil {
+			t.Fatal("Expected notification to have change event")
+		}
+		change := response.GetChange()
+		if change.Offer.Id != "test_offer_with_tx" {
+			t.Fatalf("Expected offer ID test_offer_with_tx, got %s", change.Offer.Id)
+		}
+		if change.Offer.Txbuilderwire == nil {
+			t.Fatal("Expected txbuilderwire field to be present")
+		}
+		if *change.Offer.Txbuilderwire != txBuilderData {
+			t.Fatalf("Expected txbuilderwire data to match, got %s", *change.Offer.Txbuilderwire)
+		}
+		t.Logf("Received notification with txbuilderwire: %s", *change.Offer.Txbuilderwire)
+	case <-time.After(2 * time.Second):
+		t.Fatal("Timeout waiting for notification")
+	}
+}
+
+func TestListMarginOffersWithTxBuilderWire(t *testing.T) {
+	// Create store with notification service
+	logger := logger.NewLogger("test")
+	metrics := metrics.NewMetricsCollector()
+	store := NewMemoryStore(logger, metrics)
+	store.notificationService = NewNotificationService(logger)
+
+	// Create an offer with txbuilderwire data
+	txBuilderData := `{"instructions": [{"programId": "11111111111111111111111111111111", "data": "test"}]}`
+	offer := &types.MarginOffer{
+		ID:                    "test_offer_with_tx",
+		OfferType:             types.OfferTypeV1,
+		CollateralToken:       "SOL",
+		BorrowToken:           "USDC",
+		AvailableBorrowAmount: 1000000.0,
+		MaxOpenLTV:            0.75,
+		LiquidationLTV:        0.85,
+		InterestRate:          0.05,
+		InterestModel:         types.InterestModelFixed,
+		LiquiditySource:       "marginfi",
+		CreatedTimestamp:      time.Now().UTC(),
+		UpdatedTimestamp:      time.Now().UTC(),
+		TxBuilderWire:         &txBuilderData,
+	}
+
+	// Create the offer
+	err := store.Create(context.Background(), offer)
+	if err != nil {
+		t.Fatalf("Failed to create offer: %v", err)
+	}
+
+	// List offers
+	offers, err := store.List(context.Background(), &types.ListRequest{
+		Limit:  10,
+		Offset: 0,
+	})
+	if err != nil {
+		t.Fatalf("Failed to list offers: %v", err)
+	}
+
+	// Find our offer
+	var foundOffer *types.MarginOffer
+	for _, o := range offers {
+		if o.ID == "test_offer_with_tx" {
+			foundOffer = o
+			break
+		}
+	}
+
+	if foundOffer == nil {
+		t.Fatal("Offer not found in list response")
+	}
+
+	if foundOffer.TxBuilderWire == nil {
+		t.Fatal("Expected txbuilderwire field to be present")
+	}
+
+	if *foundOffer.TxBuilderWire != txBuilderData {
+		t.Fatalf("Expected txbuilderwire data to match, got %s", *foundOffer.TxBuilderWire)
+	}
+
+	t.Logf("Successfully retrieved offer with txbuilderwire: %s", *foundOffer.TxBuilderWire)
+}

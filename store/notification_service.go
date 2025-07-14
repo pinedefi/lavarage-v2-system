@@ -310,12 +310,6 @@ func (ns *NotificationService) processChangeEvent(event *ChangeEvent) {
 			select {
 			case subscription.Channel <- pbEvent:
 				subscription.LastActivity = time.Now().UTC()
-				// Debug: Log when events are sent to subscriptions
-				ns.logger.Debug("Sent event to subscription",
-					"subscription_id", subscription.ID,
-					"client_id", subscription.ClientID,
-					"event_type", event.ChangeType.String(),
-					"offer_id", event.Offer.ID)
 			default:
 				droppedSubscriptions++
 				// Only log warning for first few dropped subscriptions to avoid spam
@@ -327,16 +321,6 @@ func (ns *NotificationService) processChangeEvent(event *ChangeEvent) {
 				}
 			}
 		}
-	}
-
-	// Debug: Log event processing summary
-	if len(subscriptions) > 0 {
-		ns.logger.Debug("Event processing summary",
-			"event_type", event.ChangeType.String(),
-			"offer_id", event.Offer.ID,
-			"total_subscriptions", len(subscriptions),
-			"matched_subscriptions", matchedSubscriptions,
-			"dropped_subscriptions", droppedSubscriptions)
 	}
 
 	if droppedSubscriptions > 0 {
@@ -352,94 +336,53 @@ func (ns *NotificationService) processChangeEvent(event *ChangeEvent) {
 func (ns *NotificationService) matchesSubscription(event *ChangeEvent, subscription *Subscription) bool {
 	filters := subscription.Filters
 
-	// Debug: Log subscription matching attempt
-	ns.logger.Debug("Checking subscription match",
-		"subscription_id", subscription.ID,
-		"client_id", subscription.ClientID,
-		"event_type", event.ChangeType.String(),
-		"offer_id", event.Offer.ID,
-		"subscribe_created", filters.SubscribeCreated,
-		"subscribe_updated", filters.SubscribeUpdated,
-		"subscribe_deleted", filters.SubscribeDeleted,
-		"subscribe_overwritten", filters.SubscribeOverwritten)
-
 	// Check if subscription is interested in this change type
 	switch event.ChangeType {
 	case ChangeTypeCreated:
 		if !filters.SubscribeCreated {
-			ns.logger.Debug("Subscription not interested in CREATED events",
-				"subscription_id", subscription.ID)
 			return false
 		}
 	case ChangeTypeUpdated:
 		if !filters.SubscribeUpdated {
-			ns.logger.Debug("Subscription not interested in UPDATED events",
-				"subscription_id", subscription.ID)
 			return false
 		}
 	case ChangeTypeDeleted:
 		if !filters.SubscribeDeleted {
-			ns.logger.Debug("Subscription not interested in DELETED events",
-				"subscription_id", subscription.ID)
 			return false
 		}
 	case ChangeTypeOverwritten:
 		if !filters.SubscribeOverwritten {
-			ns.logger.Debug("Subscription not interested in OVERWRITTEN events",
-				"subscription_id", subscription.ID)
 			return false
 		}
 	}
 
 	// Check offer type filter
 	if filters.OfferType != nil && *filters.OfferType != "" && event.Offer.OfferType != types.OfferType(*filters.OfferType) {
-		ns.logger.Debug("Subscription filtered by offer type",
-			"subscription_id", subscription.ID,
-			"want", *filters.OfferType,
-			"got", event.Offer.OfferType)
 		return false
 	}
 
 	// Check collateral token filter
 	if filters.CollateralToken != nil && *filters.CollateralToken != "" && event.Offer.CollateralToken != *filters.CollateralToken {
-		ns.logger.Debug("Subscription filtered by collateral token",
-			"subscription_id", subscription.ID,
-			"want", *filters.CollateralToken,
-			"got", event.Offer.CollateralToken)
 		return false
 	}
 
 	// Check borrow token filter
 	if filters.BorrowToken != nil && *filters.BorrowToken != "" && event.Offer.BorrowToken != *filters.BorrowToken {
-		ns.logger.Debug("Subscription filtered by borrow token",
-			"subscription_id", subscription.ID,
-			"want", *filters.BorrowToken,
-			"got", event.Offer.BorrowToken)
 		return false
 	}
 
 	// Check liquidity source filter
 	if filters.LiquiditySource != nil && *filters.LiquiditySource != "" && event.Offer.LiquiditySource != *filters.LiquiditySource {
-		ns.logger.Debug("Subscription filtered by liquidity source",
-			"subscription_id", subscription.ID,
-			"want", *filters.LiquiditySource,
-			"got", event.Offer.LiquiditySource)
 		return false
 	}
 
 	// Check lender address filter
 	if filters.LenderAddress != nil && *filters.LenderAddress != "" {
 		if event.Offer.LenderAddress == nil || *event.Offer.LenderAddress != *filters.LenderAddress {
-			ns.logger.Debug("Subscription filtered by lender address",
-				"subscription_id", subscription.ID,
-				"want", *filters.LenderAddress,
-				"got", event.Offer.LenderAddress)
 			return false
 		}
 	}
 
-	ns.logger.Debug("Subscription matches event",
-		"subscription_id", subscription.ID)
 	return true
 }
 
@@ -485,6 +428,12 @@ func (ns *NotificationService) convertToProtobufEvent(event *ChangeEvent) *pb.Su
 	}
 	if event.Offer.LastBorrowedTimestamp != nil {
 		pbOffer.LastBorrowedTimestamp = timestamppb.New(*event.Offer.LastBorrowedTimestamp)
+	}
+	if event.Offer.Source != nil {
+		pbOffer.Source = event.Offer.Source
+	}
+	if event.Offer.TxBuilderWire != nil {
+		pbOffer.Txbuilderwire = event.Offer.TxBuilderWire
 	}
 
 	// Create change event

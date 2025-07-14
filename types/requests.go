@@ -40,6 +40,43 @@ type ListRequest struct {
 	ActiveOnly     bool `json:"active_only"`
 }
 
+// PositionListRequest represents a request for listing positions with pagination and filtering
+type PositionListRequest struct {
+	// Pagination
+	Limit  int32 `json:"limit" validate:"min=1,max=1000"`
+	Offset int32 `json:"offset" validate:"min=0"`
+
+	// Sorting
+	SortBy    string `json:"sort_by,omitempty"`
+	SortOrder string `json:"sort_order,omitempty"` // "asc" or "desc"
+
+	// Filtering
+	UserAddress     *string         `json:"user_address,omitempty"`
+	OfferID         *string         `json:"offer_id,omitempty"`
+	CollateralToken *string         `json:"collateral_token,omitempty"`
+	BorrowToken     *string         `json:"borrow_token,omitempty"`
+	Status          *PositionStatus `json:"status,omitempty"`
+	Source          *string         `json:"source,omitempty"`
+
+	// Range filters
+	MinCollateralAmount *float64 `json:"min_collateral_amount,omitempty"`
+	MaxCollateralAmount *float64 `json:"max_collateral_amount,omitempty"`
+	MinBorrowedAmount   *float64 `json:"min_borrowed_amount,omitempty"`
+	MaxBorrowedAmount   *float64 `json:"max_borrowed_amount,omitempty"`
+	MinLTV              *float64 `json:"min_ltv,omitempty"`
+	MaxLTV              *float64 `json:"max_ltv,omitempty"`
+
+	// Time filters
+	CreatedAfter  *time.Time `json:"created_after,omitempty"`
+	CreatedBefore *time.Time `json:"created_before,omitempty"`
+	UpdatedAfter  *time.Time `json:"updated_after,omitempty"`
+	UpdatedBefore *time.Time `json:"updated_before,omitempty"`
+
+	// Status filters
+	IncludeLiquidated bool `json:"include_liquidated"`
+	ActiveOnly        bool `json:"active_only"`
+}
+
 // BackfillRequest represents a request for backfilling data
 type BackfillRequest struct {
 	Source    string    `json:"source" validate:"required"`
