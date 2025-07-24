@@ -1,0 +1,27 @@
+{
+  "name": "marginfi",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.30.1",
+    "@coral-xyz/borsh": "^0.30.1",
+    "@mrgnlabs/mrgn-common": "2.0.3",
+    "@pythnetwork/pyth-solana-receiver": "^0.8.0",
+    "@solana/spl-token": "^0.1.8",
+    "@solana/wallet-adapter-base": "^0.9.23",
+    "@solana/web3.js": "^1.93.2",
+    "@switchboard-xyz/on-demand": "^1.2.54",
+    "bignumber.js": "^9.1.2",
+    "borsh": "^2.0.0",
+    "bs58": "^6.0.0",
+    "crypto-hash": "^3.1.0",
+    "decimal.js": "^10.4.3",
+    "superstruct": "^1.0.4"
+  }
+}

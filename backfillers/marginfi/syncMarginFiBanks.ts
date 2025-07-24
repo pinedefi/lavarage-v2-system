@@ -197,6 +197,12 @@ class MarginFiSyncService {
   }
 
   private async fetchAllBanks(): Promise<BankMap> {
+
+    this.marginfiClient = await MarginfiClient.fetch(
+      this.config,
+      this.wallet,
+      this.connection
+    );
     console.log("Fetching MarginFi banks");
 
     try {
@@ -267,7 +273,7 @@ class MarginFiSyncService {
           bank,
           bankAddress
         );
-        if (marginFiBank) {
+        if (marginFiBank && marginFiBank.isActive) {
           marginFiBanks.push(marginFiBank);
         }
       }

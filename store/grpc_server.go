@@ -7,6 +7,7 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -38,6 +39,9 @@ func (s *GRPCServer) Start(address string) error {
 
 	s.server = grpc.NewServer()
 	pb.RegisterMarginOfferServiceServer(s.server, s)
+
+	// Register reflection service on gRPC server
+	reflection.Register(s.server)
 
 	fmt.Printf("gRPC server listening on %s\n", address)
 	return s.server.Serve(lis)
