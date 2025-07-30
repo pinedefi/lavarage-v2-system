@@ -50,6 +50,7 @@ func (s *GRPCServer) protoToMarginOffer(proto *pb.MarginOffer) (*types.MarginOff
 		InterestRate:          proto.InterestRate,
 		InterestModel:         interestModel,
 		LiquiditySource:       proto.LiquiditySource,
+		TxBuilderWire:         proto.Txbuilderwire,
 	}
 
 	// Handle optional fields
@@ -71,6 +72,11 @@ func (s *GRPCServer) protoToMarginOffer(proto *pb.MarginOffer) (*types.MarginOff
 	if proto.Source != nil {
 		source := *proto.Source
 		offer.Source = &source
+	}
+
+	if proto.Txbuilderwire != nil {
+		txBuilderWire := *proto.Txbuilderwire
+		offer.TxBuilderWire = &txBuilderWire
 	}
 
 	if proto.CreatedTimestamp != nil {
@@ -103,6 +109,7 @@ func (s *GRPCServer) marginOfferToProto(offer *types.MarginOffer) (*pb.MarginOff
 		LiquiditySource:       offer.LiquiditySource,
 		CreatedTimestamp:      timestamppb.New(offer.CreatedTimestamp),
 		UpdatedTimestamp:      timestamppb.New(offer.UpdatedTimestamp),
+		Txbuilderwire:         offer.TxBuilderWire,
 	}
 
 	// Handle optional fields
@@ -120,6 +127,10 @@ func (s *GRPCServer) marginOfferToProto(offer *types.MarginOffer) (*pb.MarginOff
 
 	if offer.Source != nil {
 		proto.Source = offer.Source
+	}
+
+	if offer.TxBuilderWire != nil {
+		proto.Txbuilderwire = offer.TxBuilderWire
 	}
 
 	return proto, nil

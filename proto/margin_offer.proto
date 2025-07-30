@@ -25,6 +25,7 @@ message MarginOffer {
   google.protobuf.Timestamp created_timestamp = 14;
   google.protobuf.Timestamp updated_timestamp = 15;
   optional string source = 16; // e.g., "marginfi", "jupiter", "manual"
+  optional string txbuilderwire = 17; // Arbitrary data (e.g., JSON) for transaction builder
 }
 
 // OverwriteFilter message definition

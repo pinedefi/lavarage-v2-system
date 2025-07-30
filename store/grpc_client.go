@@ -395,6 +395,12 @@ func convertToProtoMarginOffer(offer *types.MarginOffer) *pb.MarginOffer {
 	if offer.LastBorrowedTimestamp != nil {
 		pbOffer.LastBorrowedTimestamp = timestamppb.New(*offer.LastBorrowedTimestamp)
 	}
+	if offer.Source != nil {
+		pbOffer.Source = offer.Source
+	}
+	if offer.TxBuilderWire != nil {
+		pbOffer.Txbuilderwire = offer.TxBuilderWire
+	}
 
 	return pbOffer
 }
@@ -424,6 +430,12 @@ func convertFromProtoMarginOffer(pbOffer *pb.MarginOffer) *types.MarginOffer {
 	if pbOffer.LastBorrowedTimestamp != nil {
 		lastBorrowed := pbOffer.LastBorrowedTimestamp.AsTime()
 		offer.LastBorrowedTimestamp = &lastBorrowed
+	}
+	if pbOffer.Source != nil {
+		offer.Source = pbOffer.Source
+	}
+	if pbOffer.Txbuilderwire != nil {
+		offer.TxBuilderWire = pbOffer.Txbuilderwire
 	}
 
 	return offer
