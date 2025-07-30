@@ -1,13 +1,12 @@
 import { AccountMeta, AddressLookupTableAccount, ComputeBudgetProgram, Connection, Keypair, PublicKey, SystemProgram, TransactionInstruction, TransactionMessage, VersionedMessage, VersionedTransaction } from "@solana/web3.js";
 import { MarginfiClient, MarginfiAccountWrapper, getConfig, MarginfiProgram, Balance, makeHealthAccountMetas, MARGINFI_IDL, Bank, MintData, MakeBorrowIxOpts, makeUnwrapSolIx, MakeDepositIxOpts } from '@mrgnlabs/marginfi-client-v2';
-import { Amount, BankMetadataMap, createSyncNativeInstruction, InstructionsWrapper, NodeWallet, TOKEN_2022_PROGRAM_ID, uiToNative } from "@mrgnlabs/mrgn-common";
+import { Amount, BankMetadataMap, createSyncNativeInstruction, getMint, InstructionsWrapper, NodeWallet, TOKEN_2022_PROGRAM_ID, uiToNative } from "@mrgnlabs/mrgn-common";
 import instructions from "@mrgnlabs/marginfi-client-v2/src/instructions";
 import { BN, BorshInstructionCoder, Idl } from "@coral-xyz/anchor";
 import { MarginfiAccount } from "@mrgnlabs/marginfi-client-v2/src/models/account/pure";
 import { program } from "@coral-xyz/anchor/dist/cjs/native/system";
 import { deserializeInstruction, getAddressLookupTableAccounts, getSwapIx } from "../jup/ix";
 import { getAssociatedTokenAddressSync, NATIVE_MINT, createAssociatedTokenAccountIdempotentInstruction, createAssociatedTokenAccountInstruction } from "@mrgnlabs/mrgn-common";
-
 
 interface MarginOffer {
     id: string;
@@ -100,13 +99,22 @@ async function main() {
         const createAtaIx = createAssociatedTokenAccountInstruction(new PublicKey(userPubKey), destATA, new PublicKey(userPubKey), new PublicKey(offer.collateral_token), mintData.owner);
         jupSwapIx.push(createAtaIx);
     }
+    const key = Keypair.generate();
     
+    const memoIx = new TransactionInstruction({
+        keys: [{ pubkey: new PublicKey(userPubKey), isSigner: true, isWritable: true }],
+        data: Buffer.from("lvg0+"+key.publicKey.toBase58().slice(0, 3) + key.publicKey.toBase58().slice(-3), "utf-8"),
+        programId: new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
+      })
+    
+
 
     jupSwapIx = [...jupSwapIx,
         //...setupInstructions.map(deserializeInstruction),
         deserializeInstruction(swapInstructionPayload),
         // deserializeInstruction(cleanupInstruction),
         //computeBudgetIx,
+        memoIx,
     ].filter(ix => ix !== undefined);
     // jup swap ix
     let resultAmount = jupSwapIxEncoded.quoteResponse.otherAmountThreshold;
@@ -115,6 +123,7 @@ async function main() {
     const collateralBank = client.getBankByMint(new PublicKey(offer.collateral_token));
     if (!collateralBank) throw Error("Collateral bank not found");
 
+    
 
     //   const borrowIx2 = await marginfiAccount.makeBorrowIx(tradeAmount-marginAmount, solBank.address);
 
@@ -153,8 +162,10 @@ async function main() {
         tx.sign([newAccount]);
         console.log(Buffer.from(tx.serialize()).toString('base64'));
     } else {
-        const borrowIx = await marginfiAccount.makeBorrowIx(tradeAmount - marginAmount, solBank.address);
-        const depositIx = await marginfiAccount.makeDepositIx(resultAmount, collateralBank.address);
+        const borrowMint = await getMint(connection, new PublicKey(offer.borrow_token));
+        const depositMint = await getMint(connection, new PublicKey(offer.collateral_token));
+        const borrowIx = await marginfiAccount.makeBorrowIx((tradeAmount - marginAmount)/10** borrowMint.decimals, solBank.address);
+        const depositIx = await marginfiAccount.makeDepositIx(resultAmount/10 ** depositMint.decimals, collateralBank.address);
         const flashLoanTx = await marginfiAccount.buildFlashLoanTx({
             ixs: [...borrowIx.instructions, ...jupSwapIx, ...depositIx.instructions],
             signers: [],
